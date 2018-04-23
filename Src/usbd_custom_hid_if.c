@@ -175,6 +175,8 @@ static int8_t CUSTOM_HID_DeInit_FS(void);
 static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state);
 static int8_t USBD_CUSTOM_HID_SendReport_FS(uint8_t *report, uint16_t len);
 
+static HAL_StatusTypeDef SWI2C_Write(uint8_t Addr, uint8_t SubAddr, uint8_t * pData, uint8_t Length);
+static HAL_StatusTypeDef SWI2C_Read(uint8_t Addr, uint8_t SubAddr, uint8_t * pData, uint8_t Length);
 
 /**
   * @}
@@ -202,6 +204,7 @@ USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS =
 static int8_t CUSTOM_HID_Init_FS(void)
 {
   /* USER CODE BEGIN 4 */
+  SWI2C_Write(0xFF, 0xFF, NULL, 0);
   USB_Receive_Flag = 0;
   return (USBD_OK);
   /* USER CODE END 4 */
@@ -364,6 +367,7 @@ static HAL_StatusTypeDef _SWI2C_WriteByte(uint8_t Value)
 	HAL_GPIO_WritePin(IIC_SCL_PORT, IIC_SCL_PIN, GPIO_PIN_SET);
 	for (count = 0;count < 20;count++)
 	{
+		_SCL_Delay_Short();
 		if (HAL_GPIO_ReadPin(IIC_SDA_PORT, IIC_SDA_PIN) == 0)
 		{
 			HAL_GPIO_WritePin(IIC_SCL_PORT,IIC_SCL_PIN, GPIO_PIN_RESET);
@@ -398,10 +402,14 @@ static uint8_t _SWI2C_ReadByte(uint8_t SendAck)
 		HAL_GPIO_WritePin(IIC_SCL_PORT,IIC_SCL_PIN, GPIO_PIN_RESET);
 		_SCL_Delay_Short();
 	}	
+	_SetSDAOutput();
 	if (SendAck)
 	{
-		_SetSDAOutput();
 		HAL_GPIO_WritePin(IIC_SDA_PORT,IIC_SDA_PIN, GPIO_PIN_RESET);
+	}
+	else
+	{
+		HAL_GPIO_WritePin(IIC_SDA_PORT,IIC_SDA_PIN, GPIO_PIN_SET);
 	}
 	HAL_GPIO_WritePin(IIC_SCL_PORT, IIC_SCL_PIN, GPIO_PIN_SET);
 	_SCL_Delay();
